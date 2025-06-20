@@ -12,6 +12,7 @@ Route::get('/dashboard', [PageController::class, 'dashboard'])->middleware(['aut
 
 Route::middleware('auth')->group(function () {
     Route::get('/payroll_request', [PageController::class, 'payroll_request'])->name('payroll_request');
+    Route::put('/notification/{id}', [PageController::class, 'markAsRead'])->name('notifications.markAsRead');
     Route::post('/payroll_request', [PageController::class, 'add_payroll_request'])->name('payroll_request.store');
     Route::post('/payroll_request/approve/{id}', [PageController::class, 'approve_payroll_request'])->name('payroll_request.approve');
     Route::post('/payroll_request/reject/{id}', [PageController::class, 'reject_payroll_request'])->name('payroll_request.reject');

@@ -5,6 +5,42 @@
         </h2>
     </x-slot>
 
+    <x-slot name="notRead">
+        @if ($notRead > 0)
+            <span
+                class="absolute top-0 right-0 block h-4 w-4 transform translate-x-1/2 -translate-y-1/2 rounded-full bg-red-600 text-white text-xs leading-tight text-center">
+                {{ $notRead }}
+            </span>
+        @else
+            <span
+                class="absolute top-0 right-0 block h-4 w-4 transform translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-500 text-white text-xs leading-tight text-center">
+                {{ $notRead }}
+            </span>
+        @endif
+    </x-slot>
+
+    <x-slot name="notification_list">
+        @foreach ($notifications as $notification)
+            <div
+                class="block max-w-sm p-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
+                <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+                    {{ $notification->title }}</h5>
+                <p class="font-normal text-gray-700 dark:text-gray-400">{{ $notification->message }}</p>
+                <div class="flex justify-end">
+                    <form method="POST" action="{{ route('notifications.markAsRead', $notification->id) }}"
+                        class="inline">
+                        @csrf
+                        @method('PUT')
+                        <button type="submit"
+                            class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white">
+                            Mark as read
+                        </button>
+                    </form>
+                </div>
+            </div>
+        @endforeach
+    </x-slot>
+
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="flex justify-end mb-3">
@@ -158,8 +194,8 @@
                         data-modal-hide="static-modal">
                         <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
                             viewBox="0 0 14 14">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
                         </svg>
                         <span class="sr-only">Close modal</span>
                     </button>

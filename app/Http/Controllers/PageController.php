@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Payroll;
 use App\Models\User;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use App\Models\PayrollRequest;
 
@@ -12,7 +13,10 @@ class PageController extends Controller
     public function dashboard(){
         $payrollRequests = PayrollRequest::with(['payroll.user','user'])->where('status','processed')->get();
 
-        return view('dashboard', compact( 'payrollRequests'));
+        $notifications = Notification::where('user_id', auth()->user()->id)->orderBy('created_at', 'desc')->get();
+        $notRead = $notifications->where('is_read', false)->count();
+
+        return view('dashboard', compact('payrollRequests', 'notRead', 'notifications'));
     }
     public function payroll_request(){
         $user = auth()->user();
@@ -21,11 +25,13 @@ class PageController extends Controller
         }else{
             $data = PayrollRequest::with(['payroll.user','user'])->where('created_by',auth()->user()->id)->get();
         }
+        $notifications = Notification::where('user_id', auth()->user()->id)->orderBy('created_at', 'desc')->get();
+        $notRead = $notifications->where('is_read', false)->count();
 
         $users = User::with('payroll')->select('users.id','users.name')
             ->where('users.is_active', true)
             ->get();
-        return view('pages.payroll_request',compact('data','users'));
+        return view('pages.payroll_request',compact('data','users', 'notRead', 'notifications'));
     }
 
     public function add_payroll_request(Request $request){
@@ -46,12 +52,13 @@ class PageController extends Controller
                 $tax = 0.15;
             }
         }
+        $totalSalary = $payroll->basic_salary + $request->bonus;
 
         $payrollRequest = new PayrollRequest();
         $payrollRequest->payroll_id = $request->payroll_id;
         $payrollRequest->bonus = $request->bonus ?? 0;
         $payrollRequest->tax = $tax;
-        $payrollRequest->net_pay = $payroll ? $payroll->basic_salary - (($payroll->basic_salary + $request->bonus)  * $tax) : 0;
+        $payrollRequest->net_pay = $payroll ? ($totalSalary) - (($totalSalary)  * $tax) : 0;
         $payrollRequest->status = 'pending';
         $payrollRequest->created_by = auth()->user()->id;
 
@@ -64,6 +71,16 @@ class PageController extends Controller
 
         $payrollRequest->save();
 
+        $managers = User::where('role', 'manager')->get()->pluck('id');
+        foreach($managers as $manager){
+            Notification::insert([
+                'user_id' => $manager,
+                'title'   => 'New Payroll Request',
+                'message' => 'A new payroll request has been submitted',
+                'is_read' => false
+            ]);
+        }
+
         return redirect()->back()->with('success', 'Payroll request added successfully.');
     }
 
@@ -73,6 +90,16 @@ class PageController extends Controller
         $payrollRequest->processed_by = auth()->user()->id;
         $payrollRequest->save();
 
+        $finances = User::where('role', 'finance')->get()->pluck('id');
+        foreach($finances as $finance){
+            Notification::insert([
+                'user_id' => $finance,
+                'title'   => 'Approved Payroll Request',
+                'message' => 'A new payroll request has been approved',
+                'is_read' => false
+            ]);
+        }
+
         return redirect()->back()->with('success', 'Payroll request approved successfully.');
     }
 
@@ -81,6 +108,16 @@ class PageController extends Controller
         $payrollRequest->status = 'rejected';
         $payrollRequest->processed_by = auth()->user()->id;
         $payrollRequest->save();
+
+        $finances = User::where('role', 'finance')->get()->pluck('id');
+        foreach($finances as $finance){
+            Notification::insert([
+                'user_id' => $finance,
+                'title'   => 'Rejected Payroll Request',
+                'message' => 'A new payroll request has been rejected',
+                'is_read' => false
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Payroll request rejected successfully.');
     }
@@ -99,6 +136,24 @@ class PageController extends Controller
         $payrollRequest->processed_by = auth()->user()->id;
         $payrollRequest->save();
 
+        $directors = User::where('role', 'director')->get()->pluck('id');
+        foreach($directors as $director){
+            Notification::insert([
+                'user_id' => $director,
+                'title'   => 'Processed Payroll Request',
+                'message' => 'A new payroll request has been processed',
+                'is_read' => false
+            ]);
+        }
+
         return redirect()->back()->with('success', 'Payroll request processed successfully.');
+    }
+
+    public function markAsRead(Request $request){
+        $notification = Notification::findOrFail($request->id);
+        $notification->is_read = true;
+        $notification->save();
+
+        return redirect()->back();
     }
 }
